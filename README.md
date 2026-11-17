@@ -18,27 +18,38 @@ macOS 메뉴바 앱 기준으로 설치부터 첫 리뷰까지 4단계입니다.
 
 ### 1.1 메뉴바 앱으로 시작
 
-1. 리뷰에 쓸 CLI에 로그인합니다. GitHub CLI와 리뷰 엔진(Claude Code 또는 Codex) 하나가 필요합니다.
+1. 앱을 설치합니다. node와 gh는 함께 설치됩니다.
+
+   ```bash
+   brew install --cask juhee200/tap/review-owl
+   ```
+
+2. 리뷰 엔진을 준비하고 GitHub CLI와 엔진에 로그인합니다. 엔진은 Claude Code와 Codex 중 하나만 있으면 됩니다. 엔진은 앱과 함께 설치되지 않습니다.
+
+   | 엔진 | 설치 | 로그인 |
+   |---|---|---|
+   | Claude Code | [claude.com/claude-code](https://claude.com/claude-code) | `claude auth login` |
+   | Codex | [github.com/openai/codex](https://github.com/openai/codex) | `codex login` |
 
    ```bash
    gh auth login
    claude auth login     # Codex를 쓰면 codex login
    ```
 
-2. 앱을 설치하고 엽니다. node와 gh는 함께 설치됩니다.
+3. 앱을 엽니다. 처음 열면 설정 창이 나옵니다.
 
    ```bash
-   brew install --cask juhee200/tap/review-owl
    open "/Applications/Review Owl.app"
    ```
 
-3. 처음 열면 나오는 설정 창을 위에서부터 채운 뒤 저장합니다.
+   1~3번을 채우고 "저장"을 누른 뒤 4번을 켭니다. 4번은 저장한 설정에 저장소가 있고 환경 점검을 통과해야 켤 수 있습니다.
 
    | 순서 | 할 일 |
    |---|---|
-   | 1. 환경 점검 | 모든 필수 항목이 초록색인지 확인. 빠진 도구는 설치 명령과 복사 버튼이 나옴 |
+   | 1. 환경 점검 | 모든 필수 항목이 초록색인지 확인. 빠진 도구는 설치 명령과 복사 버튼이 나옴. 해결한 뒤 "다시 점검" |
    | 2. 감시할 저장소 | 내 PR을 리뷰할 저장소에 체크 |
    | 3. 리뷰 설정 | 엔진 선택. PR에 바로 올리려면 "PR에 리뷰 코멘트 게시"를 켬. 끄면 이 PC에만 저장(dry-run) |
+   | 저장 | 창 아래 "저장" 버튼 (⌘S) |
    | 4. 자동 실행 | "로그인 시 자동 리뷰"를 켬 |
 
 4. 감시 중인 저장소의 내 PR에 커밋을 푸시합니다. 마지막 푸시 후 최대 2분 30초(조회 간격 60초 + 추가 푸시 대기 90초) 안에 리뷰를 시작합니다. 진행 상황과 결과는 메뉴바 아이콘에서 확인합니다.
@@ -133,10 +144,11 @@ PR을 IntelliJ, 웹, CLI 중 어디서 만들었는지와 관계없이 GitHub에
 brew install --cask juhee200/tap/review-owl
 ```
 
-1. 앱을 처음 열면 설정 창이 열립니다. 위에서부터 채웁니다.
+1. 앱을 처음 열면 설정 창이 열립니다. 위에서부터 채웁니다. 리뷰 엔진(Claude Code 또는 Codex)은 앱과 함께 설치되지 않으므로 따로 설치합니다.
    - ① 환경 점검: 빠진 도구는 설치 명령을 보여 줍니다.
    - ② 감시할 저장소 선택
    - ③ 리뷰 엔진·모델·Draft 포함·PR 게시 여부
+   - "저장"을 누릅니다. ④는 저장한 뒤에 켤 수 있습니다.
    - ④ 로그인 시 자동 리뷰 켜기
 2. 메뉴바 아이콘을 누르면 다음 내용이 보입니다.
    - 감시 상태와 다음 조회까지 남은 시간
