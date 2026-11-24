@@ -68,3 +68,25 @@ describe('parseConfig', () => {
     assert.throws(() => parseConfig({ claudeSettingSources: 'project; rm' }), /claudeSettingSources/);
   });
 });
+
+describe('reviewInstructions', () => {
+  it('앞뒤 공백과 CRLF를 정리하고, 비면 null로 본다', () => {
+    assert.equal(parseConfig({}).reviewInstructions, null);
+    assert.equal(parseConfig({ reviewInstructions: null }).reviewInstructions, null);
+    assert.equal(parseConfig({ reviewInstructions: '   \n ' }).reviewInstructions, null);
+    assert.equal(parseConfig({ reviewInstructions: '  - 금액은 BigDecimal\r\n- 타임아웃 필수 \n' }).reviewInstructions, '- 금액은 BigDecimal\n- 타임아웃 필수');
+  });
+
+  it('문자열이 아니거나 4000자를 넘으면 거부한다', () => {
+    assert.throws(() => parseConfig({ reviewInstructions: 1 }), /문자열 또는 null/);
+    assert.throws(() => parseConfig({ reviewInstructions: ['a'] }), /문자열 또는 null/);
+    assert.equal(parseConfig({ reviewInstructions: 'a'.repeat(4000) }).reviewInstructions?.length, 4000);
+    assert.throws(() => parseConfig({ reviewInstructions: 'a'.repeat(4001) }), /4000자 이하/);
+  });
+
+  it('앱이 보내는 변경분으로 저장할 수 있다', () => {
+    const { raw, config } = mergeConfigPatch({ repos: ['owner/name'] }, { reviewInstructions: '- 로그에 전화번호 금지' });
+    assert.equal(raw['reviewInstructions'], '- 로그에 전화번호 금지');
+    assert.equal(config.reviewInstructions, '- 로그에 전화번호 금지');
+  });
+});

@@ -27,7 +27,12 @@ export interface Config {
   stateDir: string;
   /** Claude `--setting-sources`. 기본 `project`는 개인 hook·설정을 리뷰 실행에 쓰지 않는다. */
   claudeSettingSources: string;
+  /** 기본 리뷰 기준에 더할 사용자 기준. 프롬프트의 "추가 리뷰 기준" 절에 들어간다. 없으면 null. */
+  reviewInstructions: string | null;
 }
+
+/** reviewInstructions 최대 글자 수. 프롬프트가 지나치게 길어지지 않게 한다. */
+export const MAX_REVIEW_INSTRUCTIONS = 4000;
 
 /** 폴더·명령 이름. 화면 이름은 리뷰엉이다. */
 export const APP_SLUG = 'review-owl';
@@ -53,6 +58,7 @@ export const DEFAULT_CONFIG: Config = {
   cacheDir: join(XDG_CACHE, APP_SLUG),
   stateDir: join(XDG_STATE, APP_SLUG),
   claudeSettingSources: 'project',
+  reviewInstructions: null,
 };
 
 /**
@@ -134,6 +140,16 @@ export function parseConfig(raw: unknown): Config {
       throw new Error('maxBudgetUsd는 0보다 큰 숫자 또는 null이어야 합니다.');
     }
     config.maxBudgetUsd = budget;
+  }
+  if (input['reviewInstructions'] !== undefined) {
+    const value = input['reviewInstructions'];
+    if (value !== null && typeof value !== 'string') throw new Error('reviewInstructions는 문자열 또는 null이어야 합니다.');
+    // 빈 문자열은 설정하지 않은 것으로 본다. 앱 입력칸을 비우고 저장한 경우다.
+    const text = value?.replace(/\r\n?/g, '\n').trim() ?? '';
+    if (text.length > MAX_REVIEW_INSTRUCTIONS) {
+      throw new Error(`reviewInstructions는 ${MAX_REVIEW_INSTRUCTIONS}자 이하여야 합니다 (현재 ${text.length}자).`);
+    }
+    config.reviewInstructions = text === '' ? null : text;
   }
   for (const key of ['cacheDir', 'stateDir', 'claudeSettingSources'] as const) {
     const value = input[key];

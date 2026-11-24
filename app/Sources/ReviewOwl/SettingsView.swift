@@ -10,6 +10,10 @@ struct SettingsView: View {
     @State private var baseline = SettingsDraft(config: nil)
     @State private var repoFilter = ""
     @State private var isSaving = false
+    /// 모델 선택에서 "직접 입력"을 고른 상태. 목록에 없는 이름이 저장돼 있어도 직접 입력 칸을 보여 준다.
+    @State private var isCustomModel = false
+
+    private static let customModelTag = "__custom__"
 
     private static let toolChecks = ["node", "gh", "git", "claude", "codex"]
 
@@ -36,6 +40,9 @@ struct SettingsView: View {
         .onAppear { syncDraft(force: true) }
         .onChange(of: model.config) { syncDraft(force: false) }
         .task {
+            if model.engineModels.isEmpty { await model.loadModels() }
+        }
+        .task {
             if model.repos.isEmpty { await model.loadRepos() }
         }
     }
@@ -58,7 +65,13 @@ struct SettingsView: View {
                 Text("1. 환경 점검")
                 Spacer()
                 if model.isCheckingEnvironment { ProgressView().controlSize(.small) }
-                Button("다시 점검") { Task { await model.checkEnvironment() } }
+                // 엔진을 새로 설치했을 수 있어 모델 목록도 다시 읽는다.
+                Button("다시 점검") {
+                    Task {
+                        await model.checkEnvironment()
+                        await model.loadModels()
+                    }
+                }
                     .disabled(model.isCheckingEnvironment || model.cli == nil)
             }
         } footer: {
@@ -138,7 +151,7 @@ struct SettingsView: View {
 
     private var reviewSection: some View {
         Section("3. 리뷰 설정") {
-            Picker("리뷰 엔진", selection: $draft.engine) {
+            Picker("리뷰 엔진", selection: engineSelection) {
                 Text("Claude Code").tag("claude")
                 Text("Codex").tag("codex")
             }
@@ -148,7 +161,10 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.orange)
             }
-            TextField("모델", text: $draft.model, prompt: Text("비우면 CLI 기본 모델"))
+            modelPicker
+            if showsCustomModel {
+                TextField("모델 이름", text: $draft.model, prompt: Text(draft.engine == "codex" ? "예: gpt-6.1-sol" : "예: claude-opus-5-5"))
+            }
             Toggle("Draft PR도 리뷰", isOn: $draft.includeDrafts)
             Toggle(isOn: $draft.post) {
                 VStack(alignment: .leading, spacing: 2) {
@@ -157,6 +173,109 @@ struct SettingsView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+            }
+            reviewInstructionsEditor
+        }
+    }
+
+    /// 모델 이름은 엔진마다 달라, 엔진을 바꾸면 모델을 기본값으로 돌린다. 저장된 엔진으로 돌아오면 저장된 모델을 다시 쓴다.
+    private var engineSelection: Binding<String> {
+        Binding(
+            get: { draft.engine },
+            set: { engine in
+                guard engine != draft.engine else { return }
+                draft.engine = engine
+                draft.model = engine == baseline.engine ? baseline.model : ""
+                isCustomModel = false
+            }
+        )
+    }
+
+    private var modelOptions: [EngineModels.Option] {
+        model.models(for: draft.engine)?.models ?? []
+    }
+
+    private var showsCustomModel: Bool {
+        isCustomModel || (!draft.model.isEmpty && !modelOptions.contains { $0.id == draft.model })
+    }
+
+    private var modelSelection: Binding<String> {
+        Binding(
+            get: { showsCustomModel ? Self.customModelTag : draft.model },
+            set: { tag in
+                if tag == Self.customModelTag {
+                    isCustomModel = true
+                } else {
+                    isCustomModel = false
+                    draft.model = tag
+                }
+            }
+        )
+    }
+
+    private var modelPicker: some View {
+        Picker(selection: modelSelection) {
+            Text(defaultModelLabel).tag("")
+            if !modelOptions.isEmpty {
+                Divider()
+                ForEach(modelOptions) { option in
+                    Text(option.label).tag(option.id)
+                }
+            }
+            Divider()
+            Text("직접 입력…").tag(Self.customModelTag)
+        } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("모델")
+                Text(modelCaption)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    /// Codex처럼 기본 모델을 알 수 있으면 이름(버전)을 함께 보여 준다.
+    private var defaultModelLabel: String {
+        guard let id = model.models(for: draft.engine)?.defaultModel else { return "CLI 기본 모델" }
+        let label = modelOptions.first { $0.id == id }?.label ?? id
+        return "CLI 기본 모델 (\(label))"
+    }
+
+    private var modelCaption: String {
+        if showsCustomModel {
+            return "적은 이름을 \(draft.engine == "codex" ? "codex" : "claude") --model에 그대로 넘깁니다."
+        }
+        if draft.model.isEmpty {
+            let base = draft.engine == "codex" ? "Codex 설정(~/.codex/config.toml)의 모델을 씁니다." : "Claude Code에 설정된 기본 모델을 씁니다."
+            if model.isLoadingModels { return "\(base) 모델 목록을 불러오는 중…" }
+            if let error = model.models(for: draft.engine)?.error { return "\(base) \(error)" }
+            return base
+        }
+        guard let option = modelOptions.first(where: { $0.id == draft.model }) else { return "" }
+        // 화면 이름만으로는 버전을 알기 어려울 수 있어 --model에 넘길 이름을 함께 보여 준다.
+        return option.description.isEmpty || option.description == option.id ? option.id : "\(option.id) · \(option.description)"
+    }
+
+    /// 기본 리뷰 기준에 더할 사용자 기준. 안전·형식 규칙은 바꾸지 못하고 덧붙이기만 한다.
+    private var reviewInstructionsEditor: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("추가 리뷰 기준")
+            TextEditor(text: $draft.reviewInstructions)
+                .font(.body)
+                .frame(minHeight: 96)
+                .padding(4)
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color(nsColor: .separatorColor)))
+            HStack(alignment: .firstTextBaseline) {
+                Text("기본 기준에 더할 내용을 적습니다. 예: 금액 계산은 BigDecimal만 쓴다, 외부 API 호출에는 타임아웃을 둔다. 비우면 기본 기준만 씁니다. 적용하면 PR 리뷰 본문에 \"추가 리뷰 기준 적용\"이 표시됩니다.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 8)
+                Text("\(draft.reviewInstructionsLength)/\(SettingsDraft.reviewInstructionsLimit)")
+                    .font(.caption)
+                    .monospacedDigit()
+                    .foregroundStyle(draft.isReviewInstructionsTooLong ? .red : .secondary)
             }
         }
     }
@@ -258,15 +377,20 @@ struct SettingsView: View {
                     .lineLimit(2)
             } else if draft.repos.isEmpty {
                 Text("감시할 저장소를 하나 이상 선택하세요.").font(.callout).foregroundStyle(.secondary)
+            } else if draft.isReviewInstructionsTooLong {
+                Text("추가 리뷰 기준은 \(SettingsDraft.reviewInstructionsLimit)자 이하로 줄여 주세요.").font(.callout).foregroundStyle(.red)
             }
             Spacer()
             if isSaving { ProgressView().controlSize(.small) }
-            Button("되돌리기") { draft = baseline }
+            Button("되돌리기") {
+                draft = baseline
+                isCustomModel = false
+            }
                 .disabled(!isDirty || isSaving)
             Button("저장") { save() }
                 .keyboardShortcut("s", modifiers: .command)
                 .buttonStyle(.borderedProminent)
-                .disabled(!isDirty || draft.repos.isEmpty || isSaving || model.cli == nil)
+                .disabled(!isDirty || draft.repos.isEmpty || draft.isReviewInstructionsTooLong || isSaving || model.cli == nil)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
@@ -287,6 +411,7 @@ struct SettingsView: View {
         let loaded = SettingsDraft(config: model.config)
         draft = loaded
         baseline = loaded
+        isCustomModel = false
     }
 }
 

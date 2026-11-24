@@ -68,6 +68,9 @@ function renderBody(input, items, inlineCount) {
         `- 엔진: ${input.engine} (${sanitize(input.model)}) · 소요 ${formatDuration(input.durationMs)}`,
         `- 결과: ${countText}`,
     ];
+    if (input.customInstructions === true) {
+        lines.push('- 추가 리뷰 기준 적용 (작성자 PC의 설정)');
+    }
     if (input.truncated) {
         lines.push(`- diff가 ${input.diffLines}줄이라 앞부분만 프롬프트에 넣었고, 나머지는 AI가 git으로 직접 읽었습니다.`);
     }

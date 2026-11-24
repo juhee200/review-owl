@@ -157,3 +157,13 @@ describe('formatDuration', () => {
     assert.equal(formatDuration(125_400), '2분 5초');
   });
 });
+
+describe('추가 리뷰 기준 표시', () => {
+  it('적용했을 때만 리뷰 본문에 한 줄 표시하고 기준 내용은 싣지 않는다', () => {
+    const result: ReviewResult = { summary: 's', findings: [] };
+    assert.ok(!renderReview(input(result)).includes('추가 리뷰 기준'));
+    const body = renderReview({ ...input(result), customInstructions: true });
+    assert.ok(body.includes('- 추가 리뷰 기준 적용 (작성자 PC의 설정)'));
+    assert.ok(body.indexOf('- 결과:') < body.indexOf('- 추가 리뷰 기준 적용'));
+  });
+});

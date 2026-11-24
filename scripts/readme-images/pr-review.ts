@@ -53,6 +53,7 @@ const input: RenderInput = {
   durationMs: 187_000,
   truncated: false,
   diffLines: 214,
+  customInstructions: true,
   result: {
     summary:
       '결제 승인이 타임아웃으로 실패하면 최대 3회 다시 시도하도록 바꾼 PR입니다. 재시도마다 멱등 키가 바뀌어 한 주문이 두 번 승인될 수 있어 P1로 표시했습니다.',

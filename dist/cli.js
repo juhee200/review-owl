@@ -12,6 +12,7 @@ import { SEVERITIES } from './review/schema.js';
 import { markFailed, markReviewed, schedule } from './scheduler.js';
 import { runDoctor } from './doctor.js';
 import { listAccessibleRepos } from './repos.js';
+import { listEngineModels } from './models.js';
 import { looksLikeDaemon, readControl, readStatus, StatusReporter, writeControl } from './status.js';
 import { migrateFromLegacyName } from './migrate.js';
 import { packageVersion, readPackageVersion, versionChanged } from './version.js';
@@ -30,6 +31,7 @@ const HELP = `review-owl (리뷰엉이): 내가 올린 PR을 이 PC의 Claude Co
   review-owl service status [--json]      자동 실행 상태와 최근 로그를 보여줍니다
   review-owl doctor [--json]              설치·로그인·설정 상태를 점검합니다
   review-owl repos [--json]               선택할 수 있는 저장소 목록을 보여줍니다
+  review-owl models [--json]              엔진별로 고를 수 있는 모델 목록을 보여줍니다
   review-owl config show [--json]         설정을 보여줍니다
   review-owl config set                   표준 입력의 JSON으로 설정을 바꿉니다
   review-owl ctl <pause|resume|poll-now>  실행 중인 감시를 일시정지·재개하거나 바로 조회합니다
@@ -43,7 +45,7 @@ const HELP = `review-owl (리뷰엉이): 내가 올린 PR을 이 PC의 Claude Co
   --once                  run: 한 번만 조회하고 끝냅니다
   --plan                  run: 리뷰하지 않고 판정 결과만 보여줍니다
   --sha <커밋>            review: 지정한 커밋 기준으로 리뷰합니다 (평가용)
-  --json                  doctor·repos·config show·service status: JSON으로 출력합니다
+  --json                  doctor·repos·models·config show·service status: JSON으로 출력합니다
   -v, --version           버전
   -h, --help              도움말
 `;
@@ -401,6 +403,23 @@ async function commandRepos(values, configPath) {
     for (const item of items)
         console.log(`${item.selected ? '[x]' : '[ ]'} ${item.nameWithOwner}${item.isPrivate ? ' (비공개)' : ''}`);
 }
+async function commandModels(values) {
+    const lists = await listEngineModels();
+    if (values.json) {
+        console.log(JSON.stringify(lists, null, 2));
+        return;
+    }
+    for (const list of lists) {
+        console.log(list.engine);
+        if (list.error)
+            console.log(`  (${list.error})`);
+        if (list.defaultModel)
+            console.log(`  기본 모델: ${list.defaultModel}`);
+        for (const model of list.models)
+            console.log(`  ${model.id}  ${model.label}${model.description ? ` · ${model.description}` : ''}`);
+    }
+    console.log('\n목록에 없는 모델도 --model 또는 설정의 model에 이름을 직접 적어 쓸 수 있습니다.');
+}
 async function readStdin() {
     const chunks = [];
     for await (const chunk of process.stdin)
@@ -534,6 +553,8 @@ async function main() {
         return commandDoctor(values, configPath);
     if (command === 'repos')
         return commandRepos(values, configPath);
+    if (command === 'models')
+        return commandModels(values);
     if (command === 'config')
         return commandConfig(values, args, configPath);
     if (command === 'ctl')

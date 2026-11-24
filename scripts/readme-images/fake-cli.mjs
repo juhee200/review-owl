@@ -23,9 +23,10 @@ const responses = {
       debounceSec: 90,
       includeDrafts: true,
       engine: 'claude',
-      model: null,
+      model: 'claude-opus-5-5',
       dryRun: false,
       stateDir,
+      reviewInstructions: '- 금액 계산은 BigDecimal만 쓴다.\n- 외부 API 호출에는 연결·읽기 타임아웃을 둔다.\n- 로그에 전화번호·카드번호를 남기지 않는다.',
     },
   },
   'service status': {
@@ -55,6 +56,20 @@ const responses = {
       },
     ],
   },
+  models: [
+    {
+      engine: 'claude',
+      models: [
+        { id: 'claude-opus-5-5', label: 'Opus 5.5', description: 'For complex work and everyday tasks' },
+        { id: 'claude-fable-5-2', label: 'Fable 5.2', description: 'For your toughest challenges' },
+        { id: 'claude-sonnet-5-5', label: 'Sonnet 5.5', description: 'Most efficient for simpler tasks' },
+        { id: 'claude-haiku-5-5', label: 'Haiku 5.5', description: 'Fastest for quick answers' },
+      ],
+      defaultModel: 'claude-opus-5-5',
+      error: null,
+    },
+    { engine: 'codex', models: [], defaultModel: null, error: 'Codex CLI가 설치되지 않았습니다.' },
+  ],
   repos: [
     { nameWithOwner: 'acme/order-api', isPrivate: true, updatedAt: '2026-11-05T01:10:00Z', selected: true },
     { nameWithOwner: 'acme/web-console', isPrivate: true, updatedAt: '2026-11-05T00:40:00Z', selected: true },

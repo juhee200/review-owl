@@ -11,11 +11,12 @@ enum Snapshot {
     static func captureAll(model: AppModel) async {
         guard let directory else { return }
         model.openSettings()
-        // 환경 점검과 저장소 목록을 다 불러올 때까지 최대 60초 기다린다.
+        // 환경 점검, 저장소 목록, 모델 목록을 다 불러올 때까지 최대 60초 기다린다.
         for _ in 0..<120 {
             try? await Task.sleep(for: .milliseconds(500))
             let reposDone = !model.isLoadingRepos && (!model.repos.isEmpty || model.reposError != nil)
-            if model.doctor != nil, !model.isCheckingEnvironment, reposDone { break }
+            let modelsDone = !model.isLoadingModels && !model.engineModels.isEmpty
+            if model.doctor != nil, !model.isCheckingEnvironment, reposDone, modelsDone { break }
         }
         try? await Task.sleep(for: .seconds(1))
         // 제목 막대가 있는 창은 화면 높이를 넘지 못해, 화면 밖 테두리 없는 창에 그려 모든 항목을 담는다.

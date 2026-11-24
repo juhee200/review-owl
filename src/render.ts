@@ -16,6 +16,8 @@ export interface RenderInput {
   quotes?: ReadonlyArray<CodeQuote | null>;
   truncated: boolean;
   diffLines: number;
+  /** 사용자가 설정한 추가 리뷰 기준을 프롬프트에 넣었는지. 본문에 표시만 하고 내용은 싣지 않는다. */
+  customInstructions?: boolean;
 }
 
 /** PR 리뷰의 코드 줄 코멘트 한 건. 줄 번호는 head 커밋 기준이다. */
@@ -113,6 +115,9 @@ function renderBody(input: RenderInput, items: readonly Item[], inlineCount: num
     `- 엔진: ${input.engine} (${sanitize(input.model)}) · 소요 ${formatDuration(input.durationMs)}`,
     `- 결과: ${countText}`,
   ];
+  if (input.customInstructions === true) {
+    lines.push('- 추가 리뷰 기준 적용 (작성자 PC의 설정)');
+  }
   if (input.truncated) {
     lines.push(`- diff가 ${input.diffLines}줄이라 앞부분만 프롬프트에 넣었고, 나머지는 AI가 git으로 직접 읽었습니다.`);
   }

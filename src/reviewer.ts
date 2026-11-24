@@ -55,7 +55,7 @@ export async function reviewPullRequest(
     let quotes: Array<CodeQuote | null>;
     try {
       log(`${engine} 리뷰 실행 (변경 파일 ${workspace.changedFiles.length}개, diff ${workspace.diffLines}줄)`);
-      const prompt = buildReviewPrompt(pr, workspace);
+      const prompt = buildReviewPrompt(pr, workspace, config.reviewInstructions);
       output = engine === 'claude'
         ? await reviewWithClaude(workspace, prompt, settings)
         : await reviewWithCodex(workspace, prompt, settings);
@@ -76,6 +76,7 @@ export async function reviewPullRequest(
       quotes,
       truncated,
       diffLines,
+      customInstructions: config.reviewInstructions !== null,
     };
     // 로컬 파일·표준 출력에는 모든 지적을 인용과 함께 담는다. PR에 올리는 내용은 이 본문의 일부다.
     const body = renderReview(renderInput);

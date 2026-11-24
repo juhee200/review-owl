@@ -20,6 +20,8 @@ final class AppModel {
     private(set) var repos: [RepoItem] = []
     private(set) var isLoadingRepos = false
     private(set) var reposError: String?
+    private(set) var engineModels: [EngineModels] = []
+    private(set) var isLoadingModels = false
     private(set) var isApplyingService = false
     private(set) var opensAtLogin = SMAppService.mainApp.status == .enabled
     /// 마지막 작업의 결과나 오류. 설정 창 아래에 보여 준다.
@@ -187,6 +189,18 @@ final class AppModel {
         } catch {
             reposError = "저장소 목록을 불러오지 못했습니다: \(error.localizedDescription)"
         }
+    }
+
+    /// 엔진별 모델 선택 목록. 실패하면 목록을 비워 두고 설정 창이 직접 입력으로 받게 한다.
+    func loadModels() async {
+        guard let cli, !isLoadingModels else { return }
+        isLoadingModels = true
+        defer { isLoadingModels = false }
+        engineModels = (try? await cli.decode([EngineModels].self, ["models", "--json"], timeout: .seconds(60))) ?? []
+    }
+
+    func models(for engine: String) -> EngineModels? {
+        engineModels.first { $0.engine == engine }
     }
 
     /// 설정 창의 값을 저장한다. 감시 중이면 바로 조회하게 해서 바뀐 설정을 곧바로 적용한다.

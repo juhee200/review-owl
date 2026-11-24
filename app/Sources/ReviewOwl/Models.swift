@@ -73,6 +73,23 @@ struct RepoItem: Decodable, Sendable, Identifiable {
     var id: String { nameWithOwner }
 }
 
+/// `models --json`의 항목. 엔진 하나에서 고를 수 있는 모델 목록이다.
+struct EngineModels: Decodable, Sendable, Equatable {
+    struct Option: Decodable, Sendable, Equatable, Identifiable {
+        /// --model에 넘길 값
+        let id: String
+        let label: String
+        let description: String
+    }
+
+    let engine: String
+    let models: [Option]
+    /// model을 비웠을 때 CLI가 쓰는 모델. 알 수 없으면 nil.
+    let defaultModel: String?
+    /// 목록을 얻지 못한 이유. 있으면 models는 비어 있다.
+    let error: String?
+}
+
 /// 앱이 보여 주고 바꾸는 설정 값. 나머지 키는 CLI가 그대로 둔다.
 struct ReviewerConfig: Decodable, Sendable, Equatable {
     let repos: [String]
@@ -82,6 +99,8 @@ struct ReviewerConfig: Decodable, Sendable, Equatable {
     let model: String?
     let dryRun: Bool
     let stateDir: String
+    /// 기본 리뷰 기준에 더할 사용자 기준. 없으면 nil.
+    let reviewInstructions: String?
 }
 
 /// `config show --json` 결과.
@@ -130,6 +149,12 @@ struct SettingsDraft: Equatable {
     var model = ""
     var includeDrafts = true
     var post = false
+    var reviewInstructions = ""
+
+    /// CLI의 MAX_REVIEW_INSTRUCTIONS와 같은 값. CLI(JavaScript length)와 같게 앞뒤 공백을 지우고 UTF-16 단위로 센다.
+    static let reviewInstructionsLimit = 4000
+    var reviewInstructionsLength: Int { reviewInstructions.trimmingCharacters(in: .whitespacesAndNewlines).utf16.count }
+    var isReviewInstructionsTooLong: Bool { reviewInstructionsLength > Self.reviewInstructionsLimit }
 
     init(config: ReviewerConfig?) {
         guard let config else { return }
@@ -138,12 +163,15 @@ struct SettingsDraft: Equatable {
         model = config.model ?? ""
         includeDrafts = config.includeDrafts
         post = !config.dryRun
+        reviewInstructions = config.reviewInstructions ?? ""
     }
 
     /// `config set` 표준 입력으로 보낼 JSON.
     func patchJSON() throws -> Data {
         let trimmedModel = model.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedInstructions = reviewInstructions.trimmingCharacters(in: .whitespacesAndNewlines)
         let patch: [String: Any] = [
+            "reviewInstructions": trimmedInstructions.isEmpty ? NSNull() : trimmedInstructions,
             "repos": repos.sorted(),
             "engine": engine,
             "model": trimmedModel.isEmpty ? NSNull() : trimmedModel,

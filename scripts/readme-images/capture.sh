@@ -56,11 +56,11 @@ cp "$SHOTS/menu.png" "$OUT/menu.png"
 cp "$SHOTS/menubar-icons.png" "$OUT/menubar-icons.png"
 # 스냅샷은 창 높이를 2100pt로 고정해 그리므로 내용 아래 빈 영역을 잘라낸다. 높이는 샘플 데이터 기준이다.
 # sips는 cropOffset이 0 0이면 가운데를 잘라 1px 아래에서 시작한다.
-sips -c "${SETTINGS_HEIGHT:-2580}" 1240 --cropOffset 1 0 "$SHOTS/settings.png" --out "$OUT/settings.png" >/dev/null
+sips -c "${SETTINGS_HEIGHT:-2980}" 1240 --cropOffset 1 0 "$SHOTS/settings.png" --out "$OUT/settings.png" >/dev/null
 
 # 2. PR 리뷰 화면
 node "$HERE/pr-review.ts" "$WORK/pr-review.html"
 "$CHROME" --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=2 \
-  --window-size=920,"${PR_REVIEW_HEIGHT:-1390}" --screenshot="$OUT/pr-review.png" "file://$WORK/pr-review.html" 2>/dev/null
+  --window-size=920,"${PR_REVIEW_HEIGHT:-1420}" --screenshot="$OUT/pr-review.png" "file://$WORK/pr-review.html" 2>/dev/null
 
 ls -l "$OUT"

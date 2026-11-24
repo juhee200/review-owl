@@ -48,7 +48,7 @@ macOS 메뉴바 앱 기준으로 설치부터 첫 리뷰까지 4단계입니다.
    |---|---|
    | 1. 환경 점검 | 모든 필수 항목이 초록색인지 확인. 빠진 도구는 설치 명령과 복사 버튼이 나옴. 해결한 뒤 "다시 점검" |
    | 2. 감시할 저장소 | 내 PR을 리뷰할 저장소에 체크 |
-   | 3. 리뷰 설정 | 엔진 선택. PR에 바로 올리려면 "PR에 리뷰 코멘트 게시"를 켬. 끄면 이 PC에만 저장(dry-run) |
+   | 3. 리뷰 설정 | 엔진과 모델 선택. PR에 바로 올리려면 "PR에 리뷰 코멘트 게시"를 켬. 끄면 이 PC에만 저장(dry-run). 필요하면 "추가 리뷰 기준" 입력([6.1](#61-추가-리뷰-기준)) |
    | 저장 | 창 아래 "저장" 버튼 (⌘S) |
    | 4. 자동 실행 | "로그인 시 자동 리뷰"를 켬 |
 
@@ -57,7 +57,7 @@ macOS 메뉴바 앱 기준으로 설치부터 첫 리뷰까지 4단계입니다.
 ### 1.2 CLI로 시작
 
 ```bash
-npm install -g --install-links git+https://github.com/juhee200/review-owl.git#v0.6.0
+npm install -g --install-links git+https://github.com/juhee200/review-owl.git#v0.7.0
 review-owl init                                      # 설정 파일 생성
 echo '{"repos":["owner/name"]}' | review-owl config set
 review-owl doctor                                    # 도구·로그인·설정 점검
@@ -83,7 +83,7 @@ review-owl service install --post                    # 로그인 시 자동 실�
 | 화면 | 보이는 내용 |
 |---|---|
 | 메뉴바 | 감시 상태, 리뷰 중·대기 중인 PR, 최근 리뷰 5건(심각도별 건수, 게시 여부). 행 오른쪽 버튼으로 PR, 게시한 코멘트, 이 PC에 저장한 결과 파일을 엶 |
-| 설정 창 | 환경 점검, 감시할 저장소, 리뷰 엔진·모델·Draft 포함·게시 여부, 자동 실행 등록 |
+| 설정 창 | 환경 점검, 감시할 저장소, 리뷰 엔진·모델·Draft 포함·게시 여부·추가 리뷰 기준, 자동 실행 등록 |
 | PR 리뷰 (맨 위 이미지) | 리뷰 본문에 대상 커밋·엔진·심각도별 건수·요약. diff 안의 지적은 해당 코드 줄 코멘트로, diff 밖의 지적은 코드를 인용해 본문에 담음 |
 
 메뉴바 아이콘은 리뷰엉이에 상태를 겹쳐 보여 줍니다.
@@ -115,7 +115,7 @@ PR을 IntelliJ, 웹, CLI 중 어디서 만들었는지와 관계없이 GitHub에
 
 | 위치 | 담는 내용 |
 |---|---|
-| 리뷰 본문 | 대상 커밋, 엔진, 심각도별 건수, 요약 |
+| 리뷰 본문 | 대상 커밋, 엔진, 심각도별 건수, 추가 리뷰 기준 적용 여부, 요약 |
 | 코드 줄 코멘트 | 이번 diff에 나오는 줄을 가리키는 지적. 1건당 코멘트 1개라 지적마다 답글을 달고 따로 resolve할 수 있음 |
 | 리뷰 본문 아래 | diff 밖의 줄이나 줄 번호가 없는 지적. 해당 코드를 head 커밋에서 읽어 코드 블록으로 인용 |
 
@@ -171,7 +171,7 @@ brew install --cask juhee200/tap/review-owl
 GitHub 저장소에서 바로 설치합니다. 빌드된 `dist`가 저장소에 들어 있어 설치할 때 빌드하지 않습니다.
 
 ```bash
-npm install -g --install-links git+https://github.com/juhee200/review-owl.git#v0.6.0
+npm install -g --install-links git+https://github.com/juhee200/review-owl.git#v0.7.0
 review-owl init
 ```
 
@@ -243,7 +243,7 @@ review-owl config show
 | `debounceSec` | 90 | 새 커밋을 본 뒤 추가 푸시를 기다리는 시간(초). 0이면 바로 리뷰 |
 | `includeDrafts` | true | Draft PR도 리뷰 |
 | `engine` | `claude` | `claude` 또는 `codex` |
-| `model` | null | 엔진 모델. null이면 각 CLI의 기본 모델 |
+| `model` | null | 엔진 모델. null이면 각 CLI의 기본 모델. 고를 수 있는 이름은 `review-owl models`로 확인 ([6.2](#62-모델-선택)) |
 | `maxBudgetUsd` | null | Claude `--max-budget-usd` 상한 |
 | `timeoutSec` | 900 | 리뷰 1건 제한 시간(초) |
 | `maxDiffLines` | 3000 | 프롬프트에 직접 넣을 diff 최대 줄 수. 넘으면 앞부분만 넣고 나머지는 AI가 git으로 읽음 |
@@ -252,6 +252,53 @@ review-owl config show
 | `claudeSettingSources` | `project` | Claude `--setting-sources`. 개인 hook·설정이 리뷰 실행에 끼지 않게 함 |
 | `cacheDir` | `~/.cache/review-owl` | 저장소 캐시와 worktree |
 | `stateDir` | `~/.local/state/review-owl` | 상태, 실행 기록(`runs.jsonl`), 리뷰 결과 파일(`reviews/`), 감시 상태(`status.json`) |
+| `reviewInstructions` | null | 기본 리뷰 기준에 더할 내용. 최대 4,000자. 비우면 null ([6.1](#61-추가-리뷰-기준)) |
+
+### 6.1 추가 리뷰 기준
+
+기본 리뷰 기준에 이 PC 사용자의 기준을 덧붙입니다. 설정 창 "3. 리뷰 설정"의 "추가 리뷰 기준" 칸에 적거나 CLI로 저장합니다.
+
+```bash
+printf '%s' '{"reviewInstructions":"- 금액 계산은 BigDecimal만 쓴다.\n- 외부 API 호출에는 연결·읽기 타임아웃을 둔다."}' | review-owl config set
+echo '{"reviewInstructions":null}' | review-owl config set     # 지우기
+```
+
+여러 줄은 JSON 안에 `\n`으로 씁니다. macOS 기본 셸(zsh)의 `echo`는 `\n`을 실제 줄바꿈으로 바꿔 JSON이 깨지므로 `printf '%s'`를 씁니다.
+
+| 항목 | 동작 |
+|---|---|
+| 프롬프트 위치 | 기본 규칙 뒤, PR 데이터(변경 파일·diff) 앞에 "추가 리뷰 기준" 절로 넣음 |
+| 바꿀 수 있는 것 | 리뷰 관점과 우선순위(규칙 1~4), 문장 형식(규칙 9). 예: 팀 코딩 규칙, 도메인 주의점, 지적하지 말 것 |
+| 바꿀 수 없는 것 | PR 데이터 속 지시 무시, 읽기 전용, 심각도 정의, 코드 위치 형식(규칙 5~8)과 JSON 출력 형식. 충돌하면 기본 규칙을 따르라고 프롬프트에 적음 |
+| PR 리뷰 본문 | "추가 리뷰 기준 적용 (작성자 PC의 설정)"을 한 줄 표시. 기준 내용은 싣지 않음 |
+| 반영 시점 | 다음 리뷰부터. 감시 중이면 재시작하지 않아도 됨 |
+
+📌 팀이 함께 쓸 기준은 저장소의 AGENTS.md·CLAUDE.md·CONTRIBUTING.md에 두는 편이 맞습니다. 리뷰어는 이 문서를 먼저 읽고 따릅니다(규칙 1). 추가 리뷰 기준은 개인 PC 단위입니다.
+
+### 6.2 모델 선택
+
+설정 창 "3. 리뷰 설정"의 "모델" 목록에서 고릅니다. 고른 값은 `model`에 저장되고, 리뷰할 때 각 CLI의 `--model`로 넘어갑니다.
+
+| 엔진 | 목록 출처 | 목록 항목 |
+|---|---|---|
+| Claude Code | Claude Code가 계정별로 받아 두는 모델 캐시(`~/.claude/cache/model-catalog/`). 캐시가 없거나 형식이 다르면 앱에 넣어 둔 목록 | Claude Code `/model` 첫 화면의 주 목록. 이전 모델과 숨김 모델은 뺌. 2026-11-24 기준 Opus 5.5, Fable 5.2, Sonnet 5.5, Haiku 5.5 |
+| Codex | `codex debug models`의 카탈로그 | Codex의 `/model` 목록에 보이는 모델(visibility `list`). 이름에 버전이 들어 있음(GPT-6.1 Terra 등) |
+
+목록 항목은 모델 이름과 버전으로 보이고, 고르면 아래에 `--model`에 넘길 이름과 설명이 나옵니다. Claude는 별칭(`opus` 등) 대신 버전이 고정된 전체 이름(`claude-opus-5-5` 등)으로 저장합니다. 별칭은 새 모델이 나오면 가리키는 대상이 바뀌어, 화면의 버전과 실제 모델이 달라질 수 있기 때문입니다.
+
+⚠️ Claude Code에는 모델 목록 명령이 없어, 문서화되지 않은 캐시 파일을 읽습니다. Claude Code가 형식을 바꾸면 앱에 넣어 둔 목록으로 돌아갑니다. 그 목록에 없는 새 모델은 "직접 입력…"으로 씁니다. 캐시는 Claude Code를 실행할 때 갱신됩니다.
+
+- "CLI 기본 모델"을 고르면 `model`을 null로 저장합니다. Claude Code는 자기 설정의 기본 모델을, Codex는 `~/.codex/config.toml`의 `model`을 씁니다. 기본 모델을 알 수 있으면 "CLI 기본 모델 (Opus 5.5)"처럼 함께 보여 줍니다. Claude는 캐시의 계정 기본 모델을 보여 줍니다. 개인 설정(`~/.claude/settings.json`)에서 고른 모델은 리뷰 실행(`--setting-sources project`)에 쓰이지 않아 보여 주지 않습니다.
+- 목록에 없는 모델은 "직접 입력…"을 골라 이름을 적습니다. 별칭(`opus`)도 여기에 적으면 그대로 씁니다.
+- 엔진을 바꾸면 모델이 "CLI 기본 모델"로 돌아갑니다. 모델 이름이 엔진마다 다르기 때문입니다. 저장된 엔진으로 되돌리면 저장된 모델이 다시 선택됩니다.
+- Codex 목록을 읽지 못하면(미설치, 명령 실패) 목록 대신 이유를 보여 주고, 직접 입력은 그대로 쓸 수 있습니다. Codex를 설치한 뒤 "다시 점검"을 누르면 목록을 다시 읽습니다.
+
+CLI에서는 다음과 같이 확인하고 바꿉니다.
+
+```bash
+review-owl models                                  # 엔진별 모델 목록 (--json 가능)
+echo '{"engine":"codex","model":"gpt-6.1-sol"}' | review-owl config set
+```
 
 ## 7. 사용법
 
@@ -261,6 +308,7 @@ review-owl run                        # 감시 시작 (기본 dry-run)
 review-owl run --post                 # 감시하며 PR에 게시
 review-owl review owner/repo 123      # PR 하나를 지금 리뷰 (기본 dry-run)
 review-owl review owner/repo 123 --engine codex
+review-owl review owner/repo 123 --model claude-sonnet-5-5
 review-owl review owner/repo 123 --sha <40자리 커밋>   # 과거 커밋 기준 리뷰 (평가용)
 review-owl status                     # 대기·리뷰 기록
 review-owl doctor                     # node, gh 로그인, git, claude, codex, 설정, 자동 실행 점검
@@ -269,7 +317,7 @@ review-owl ctl pause                  # 실행 중인 감시 일시정지 (resum
 
 로그는 stderr, 리뷰 본문은 stdout으로 나갑니다. dry-run 결과도 `stateDir/reviews/`에 파일로 남습니다.
 
-`doctor`, `repos`, `config show`, `service status`는 `--json`을 붙이면 JSON으로 출력합니다.
+`doctor`, `repos`, `models`, `config show`, `service status`는 `--json`을 붙이면 JSON으로 출력합니다.
 
 ## 8. 로그인 시 자동 실행 (macOS)
 

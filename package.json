@@ -1,6 +1,6 @@
 {
   "name": "review-owl",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "리뷰엉이: 내가 올린 PR을 감지해 이 PC의 Claude Code 또는 Codex CLI로 리뷰하는 로컬 상주 도구",
   "private": true,
   "license": "MIT",

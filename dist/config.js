@@ -1,6 +1,8 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
+/** reviewInstructions 최대 글자 수. 프롬프트가 지나치게 길어지지 않게 한다. */
+export const MAX_REVIEW_INSTRUCTIONS = 4000;
 /** 폴더·명령 이름. 화면 이름은 리뷰엉이다. */
 export const APP_SLUG = 'review-owl';
 /** v0.5.0까지 쓰던 이름. 옛 폴더를 옮기고 옛 자동 실행을 정리할 때 쓴다. */
@@ -23,6 +25,7 @@ export const DEFAULT_CONFIG = {
     cacheDir: join(XDG_CACHE, APP_SLUG),
     stateDir: join(XDG_STATE, APP_SLUG),
     claudeSettingSources: 'project',
+    reviewInstructions: null,
 };
 /**
  * REVIEW_OWL_CONFIG가 있으면 그 경로를 쓴다. 메뉴바 앱도 이 값을 CLI에 그대로 넘긴다.
@@ -95,6 +98,17 @@ export function parseConfig(raw) {
             throw new Error('maxBudgetUsd는 0보다 큰 숫자 또는 null이어야 합니다.');
         }
         config.maxBudgetUsd = budget;
+    }
+    if (input['reviewInstructions'] !== undefined) {
+        const value = input['reviewInstructions'];
+        if (value !== null && typeof value !== 'string')
+            throw new Error('reviewInstructions는 문자열 또는 null이어야 합니다.');
+        // 빈 문자열은 설정하지 않은 것으로 본다. 앱 입력칸을 비우고 저장한 경우다.
+        const text = value?.replace(/\r\n?/g, '\n').trim() ?? '';
+        if (text.length > MAX_REVIEW_INSTRUCTIONS) {
+            throw new Error(`reviewInstructions는 ${MAX_REVIEW_INSTRUCTIONS}자 이하여야 합니다 (현재 ${text.length}자).`);
+        }
+        config.reviewInstructions = text === '' ? null : text;
     }
     for (const key of ['cacheDir', 'stateDir', 'claudeSettingSources']) {
         const value = input[key];
